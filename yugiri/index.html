@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>湯切り職人 〜一子相伝〜</title>
+<meta name="description" content="スワイプでラーメンの湯を切る、無駄に本格的な職人シミュレーター。振りの強さ・止めのキレ・リズムを極めて、一子相伝の称号を目指せ。">
+<!-- OGP -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="湯切り職人 〜一子相伝〜">
+<meta property="og:description" content="スワイプでラーメンの湯を切れ。強すぎると麺が天井へ飛んでいく。">
+<meta property="og:url" content="https://ucchi-ucchi.github.io/yugiri/">
+<meta property="og:image" content="https://ucchi-ucchi.github.io/yugiri/ogp.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="湯切り職人 〜一子相伝〜">
+<meta name="twitter:description" content="スワイプでラーメンの湯を切れ。強すぎると麺が天井へ飛んでいく。">
+<meta name="twitter:image" content="https://ucchi-ucchi.github.io/yugiri/ogp.jpg">
+<style>
+  html,body{margin:0;height:100%;background:#1b120c;overflow:hidden;touch-action:none;
+    font-family:"Hiragino Mincho ProN","Yu Mincho","Noto Serif JP",serif;color:#f4e6cc;
+    -webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent}
+  canvas{display:block;width:100vw;height:100vh;height:100dvh}
+  .ui{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    text-align:center;padding:20px;box-sizing:border-box;pointer-events:none;overflow-y:auto}
+  .ui.hidden{display:none}
+  .ui *{pointer-events:auto}
+  h1{font-size:clamp(34px,10vw,56px);margin:0 0 4px;letter-spacing:.08em;text-shadow:0 3px 0 #000}
+  .sub{font-size:17px;opacity:.85;margin-bottom:18px}
+  .how{font-size:14px;line-height:1.8;background:rgba(0,0,0,.5);border:1px solid #6b4a2b;padding:10px 14px;border-radius:8px;margin-bottom:14px;text-align:left}
+  .best{font-size:15px;margin-bottom:14px;opacity:.9}
+  button,a.btn{display:inline-block;text-decoration:none;font-family:inherit;font-size:19px;font-weight:bold;border:none;border-radius:10px;padding:13px 24px;margin:5px;
+    background:#c8361f;color:#fff;box-shadow:0 4px 0 #6d1a0d;cursor:pointer}
+  button:active,a.btn:active{transform:translateY(3px);box-shadow:0 1px 0 #6d1a0d}
+  .x{background:#111 !important;box-shadow:0 4px 0 #444 !important}
+  .sub2{background:#6b4a2b !important;box-shadow:0 4px 0 #3a2716 !important}
+  .rank{font-size:clamp(26px,8vw,42px);font-weight:bold;margin:4px 0 2px;color:#ffd36b;text-shadow:0 3px 0 #000}
+  .score{font-size:22px;margin-bottom:8px}
+  .stats{font-size:14px;line-height:1.85;background:rgba(0,0,0,.55);border:1px solid #6b4a2b;border-radius:8px;padding:8px 14px;margin-bottom:10px}
+  .comment{font-size:15px;margin-bottom:10px;max-width:330px;line-height:1.6}
+  .newt{font-size:15px;color:#ffd36b;margin-bottom:10px;line-height:1.6}
+  .label{font-size:14px;opacity:.7}
+  .list{width:min(340px,90vw);background:rgba(0,0,0,.6);border:1px solid #6b4a2b;border-radius:8px;padding:6px 12px;margin-bottom:14px;text-align:left;font-size:14px}
+  .list div{padding:7px 0;border-bottom:1px solid rgba(255,255,255,.08)}
+  .list div:last-child{border:none}
+  .list .lock{opacity:.4}
+  .list small{display:block;opacity:.7;font-size:12px}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<div id="title" class="ui">
+  <div class="label">— 一子相伝 —</div>
+  <h1>湯切り職人</h1>
+  <div class="sub">この一振りに、店の暖簾がかかっている。</div>
+  <div class="how">
+    ・画面を<b>上から下へスワイプ</b>して湯を切る<br>
+    ・<b>強さ</b>：湯が多いと重い。減るほど優しく<br>
+    ・<b>止め</b>：振り下ろしたら指をピタッと止める<br>
+    ・<b>間</b>：一定のリズムで振るとコンボが続く<br>
+    ・強すぎると麺が旅立つ。制限時間 <b>12秒</b>
+  </div>
+  <div class="best" id="bestLine"></div>
+  <div>
+    <button id="startBtn">暖簾をくぐる</button>
+    <button class="sub2" id="bookBtn">称号帳</button>
+  </div>
+</div>
+
+<div id="book" class="ui hidden">
+  <div class="rank" style="font-size:30px">称号帳</div>
+  <div class="label" id="bookCount" style="margin-bottom:8px"></div>
+  <div class="list" id="bookList"></div>
+  <button class="sub2" id="bookClose">戻る</button>
+</div>
+
+<div id="result" class="ui hidden">
+  <div class="label">本日の評価</div>
+  <div class="rank" id="rRank"></div>
+  <div class="score" id="rScore"></div>
+  <div class="stats" id="rStats"></div>
+  <div class="comment" id="rComment"></div>
+  <div class="newt" id="rNew"></div>
+  <div>
+    <a id="shareBtn" class="btn x" target="_blank" rel="noopener">𝕏 でシェア</a>
+    <button class="sub2" id="retryBtn">もう一杯</button>
+  </div>
+  <button class="sub2" id="toTitle" style="font-size:15px;padding:9px 18px">暖簾の外へ</button>
+</div>
+
+<script>
+(() => {
+const cv = document.getElementById('c');
+const ctx = cv.getContext('2d');
+const $ = id => document.getElementById(id);
+let W = 0, H = 0, DPR = 1;
+function resize(){
+  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  W = window.innerWidth; H = window.innerHeight;
+  cv.width = W * DPR; cv.height = H * DPR;
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+}
+window.addEventListener('resize', resize); resize();
+
+// ---------- 保存（ハイスコアと称号） ----------
+const SAVE_KEY = 'yugiri_save_v1';
+let save = { best: 0, titles: {} };
+try { const s = JSON.parse(localStorage.getItem(SAVE_KEY)); if(s) save = Object.assign(save, s); } catch(e){}
+function persist(){ try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch(e){} }
+
+const TITLES = [
+  { id:'first',   name:'暖簾をくぐりし者', hint:'初めて湯を切る' },
+  { id:'kiwami',  name:'極みを見た者',     hint:'「極」の一振りを出す' },
+  { id:'combo5',  name:'五連の湯',         hint:'5コンボを達成' },
+  { id:'combo9',  name:'九蓮宝湯',         hint:'9コンボを達成' },
+  { id:'ceiling', name:'天井の染み',       hint:'麺を天井に到達させる' },
+  { id:'space',   name:'麺の宇宙旅行',     hint:'麺を10m以上飛ばす' },
+  { id:'bland',   name:'湯ごと提供する者', hint:'ほとんど湯を切らずに出す' },
+  { id:'perfect', name:'一滴も、一本も',   hint:'湯を切りきり、麺を1本も失わない' },
+  { id:'heir',    name:'一子相伝の継承者', hint:'1900点以上' },
+  { id:'god',     name:'湯切りの神',       hint:'？？？' },
+];
+
+// ---------- 状態 ----------
+const TIME_LIMIT = 12;
+let state = 'title';
+let water, noodles, timeLeft, flicks, kiwami, maxFly, readyT, shake, ceilingSplat;
+let flickScore, combo, maxCombo, lastFlickT, sumQ;
+let offset = 0, targetOffset = 0;
+let particles = [], flyers = [], popups = [];
+
+function reset(){
+  water = 100; noodles = 100; timeLeft = TIME_LIMIT;
+  flicks = 0; kiwami = 0; maxFly = 0; readyT = 1.2; shake = 0; ceilingSplat = 0;
+  flickScore = 0; combo = 0; maxCombo = 0; lastFlickT = 0; sumQ = 0;
+  particles = []; flyers = []; popups = [];
+  offset = 0; targetOffset = 0;
+}
+reset();
+
+// ---------- 音 ----------
+let actx = null;
+function initAudio(){ try{ actx = actx || new (window.AudioContext||window.webkitAudioContext)(); actx.resume && actx.resume(); }catch(e){} }
+function swoosh(strength, crisp){
+  if(!actx) return;
+  try{
+    const len = 0.22, buf = actx.createBuffer(1, actx.sampleRate*len, actx.sampleRate);
+    const d = buf.getChannelData(0);
+    const decay = 2 + crisp*5;
+    for(let i=0;i<d.length;i++){ d[i] = (Math.random()*2-1) * Math.pow(1-i/d.length, decay); }
+    const src = actx.createBufferSource(); src.buffer = buf;
+    const f = actx.createBiquadFilter(); f.type='bandpass'; f.frequency.value = 700 + strength*200 + crisp*900;
+    const g = actx.createGain(); g.gain.value = Math.min(0.9, 0.2 + strength*0.07);
+    src.connect(f); f.connect(g); g.connect(actx.destination); src.start();
+  }catch(e){}
+}
+
+// ---------- 入力 ----------
+// s：振りの速さ（画面の高さ/秒）、stopMs：最速点から止まるまでの時間
+let pointerDown = false, lastY = 0, lastT = 0, startY = 0, vy = 0, peak = 0, peakT = 0, inFlick = false;
+function onDown(e){
+  if(state !== 'play') return;
+  pointerDown = true; lastY = startY = e.clientY; lastT = performance.now(); vy = 0; peak = 0; inFlick = false;
+}
+function onMove(e){
+  if(!pointerDown || state !== 'play') return;
+  const now = performance.now(), dt = Math.max(1, now - lastT);
+  const inst = (e.clientY - lastY) / dt * 1000 / H;
+  vy = vy * 0.45 + inst * 0.55;
+  lastY = e.clientY; lastT = now;
+  targetOffset = Math.max(-H*0.18, Math.min(H*0.22, e.clientY - startY));
+  if(vy > 1.2){ inFlick = true; if(vy > peak){ peak = vy; peakT = now; } }
+  else if(inFlick && vy < peak * 0.3){ doFlick(peak, now - peakT); inFlick = false; peak = 0; }
+  if(vy < -0.5){ startY = e.clientY - targetOffset; }
+}
+function onUp(){
+  if(inFlick && state === 'play') doFlick(peak, 999); // 指を離した＝止めが抜けた
+  pointerDown = false; inFlick = false; peak = 0; targetOffset = 0;
+}
+cv.addEventListener('pointerdown', onDown);
+window.addEventListener('pointermove', onMove);
+window.addEventListener('pointerup', onUp);
+window.addEventListener('pointercancel', onUp);
+
+// ---------- 一振りの判定 ----------
+const SIGMA = 0.85;             // 強さの許容幅（狭いほど難しい）
+const RHYTHM = 0.55, RHYTHM_W = 0.17; // 理想の間隔（秒）と許容幅
+function idealSpeed(){ return 3.4 + 3.2 * (water/100); } // 湯が多いほど重い
+function doFlick(s, stopMs){
+  if(readyT > 0 || s < 1.2) return;
+  const now = performance.now() / 1000;
+  flicks++;
+  const ideal = idealSpeed();
+  const q = Math.exp(-Math.pow(s - ideal, 2) / (2*SIGMA*SIGMA));         // 強さ
+  const k = stopMs >= 999 ? 0.15 : Math.max(0, Math.min(1, 1 - (stopMs - 35) / 140)); // 止め
+  const gap = lastFlickT ? now - lastFlickT : RHYTHM;
+  const r = Math.exp(-Math.pow((gap - RHYTHM) / RHYTHM_W, 2));           // 間
+  lastFlickT = now;
+  sumQ += q;
+
+  // 湯切り
+  const before = water;
+  water = Math.max(0, water - water * (0.04 + 0.30 * q * (0.55 + 0.45*k)));
+  const removed = before - water;
+
+  // コンボ
+  const good = q > 0.75 && k > 0.55 && r > 0.4;
+  combo = good ? combo + 1 : 0;
+  maxCombo = Math.max(maxCombo, combo);
+  const mult = Math.min(3, 1 + 0.25 * Math.max(0, combo - 1));
+  const pts = Math.round(removed * 12 * (0.45 + 0.55*k) * (0.6 + 0.4*r) * mult); // 切った湯の量×質×コンボ
+  flickScore += pts;
+
+  // 演出
+  const zx = W*0.5, zy = zaruY() + 40;
+  for(let i=0;i<Math.min(60, 6 + removed*2.2);i++){
+    particles.push({x: zx + (Math.random()-0.5)*90, y: zy + 30, vx:(Math.random()-0.5)*7, vy: 4+Math.random()*9, life:1});
+  }
+  swoosh(s, k);
+  shake = Math.min(14, s*1.2 + k*4);
+
+  // 強すぎ：麺が飛ぶ
+  if(s > ideal + 2.1){
+    combo = 0;
+    const over = s - (ideal + 2.1);
+    const lost = noodles * Math.min(0.8, over*0.12 + 0.1);
+    noodles -= lost;
+    const dist = Math.round((over*1.9 + 0.8 + Math.random()*0.6) * 10) / 10;
+    maxFly = Math.max(maxFly, dist);
+    for(let i=0;i<Math.min(14, 3 + lost/4);i++){
+      flyers.push({x: zx + (Math.random()-0.5)*60, y: zaruY(), vx:(Math.random()-0.5)*5, vy: -(17 + Math.random()*9 + over*2), rot:Math.random()*6, vr:(Math.random()-0.5)*0.4});
+    }
+    pop(['麺が旅立った！','強すぎる！','麺、離陸','おい、麺！'][Math.floor(Math.random()*4)], `${dist}m 飛んだ`, '#ff6b5b');
+  } else {
+    let grade, color;
+    if(q > 0.92 && k > 0.8 && r > 0.6){ grade = '極'; color = '#ffe08a'; kiwami++; shake += 6; }
+    else if(q > 0.75 && k > 0.55){ grade = '良'; color = '#ffd36b'; }
+    else if(q > 0.45){ grade = '可'; color = '#f4e6cc'; }
+    else { grade = '甘い'; color = '#9fc6ff'; }
+    // コツのヒント（いちばん悪かった要素を1つだけ伝える）
+    const hints = [];
+    if(q < 0.8) hints.push([1-q, s > ideal ? 'やや強い' : 'もっと腰を入れろ']);
+    if(k < 0.7) hints.push([1-k, stopMs >= 999 ? '指を離すな、止めろ' : '止めが甘い']);
+    if(r < 0.6 && flicks > 1) hints.push([1-r, gap < RHYTHM ? 'せわしない' : '間が長い']);
+    hints.sort((a,b)=>b[0]-a[0]);
+    const sub = hints.length ? hints[0][1] : (combo > 1 ? `${combo}連！ ×${mult.toFixed(2)}` : '見事');
+    pop(grade, sub, color, grade === '極');
+  }
+  if(water <= 1.5) endGame();
+}
+function pop(text, sub, color, big){ popups.push({text, sub, color, big, t:1.0, y: H*0.27}); if(popups.length > 2) popups.shift(); }
+
+// ---------- 終了と結果 ----------
+function endGame(){
+  if(state !== 'play') return;
+  state = 'over'; pointerDown = false;
+  setTimeout(showResult, 700);
+}
+let lastResult = null;
+function showResult(){
+  state = 'result';
+  const dry = 100 - water;
+  const finish = Math.round(dry*2 + noodles*2);
+  const timeBonus = water <= 1.5 ? Math.round(timeLeft * 30) : 0;
+  const score = flickScore + finish + timeBonus;
+
+  let rank, comment;
+  if(noodles < 40){ rank = '麺を解き放ちし者'; comment = `麺は天井へ旅立ち、${maxFly}m の記録を残した。客の前には、ほぼ空の丼。`; }
+  else if(dry < 40){ rank = '湯ごと提供する者'; comment = 'スープは限界まで薄まった。客は「優しい味ですね」とだけ言った。'; }
+  else if(score >= 2200){ rank = '湯切りの神'; comment = '湯が自ら麺から離れていった。親方は静かに引退を決めた。'; }
+  else if(score >= 1900){ rank = '一子相伝の継承者'; comment = '親方は何も言わず、店の暖簾をそっと差し出した。'; }
+  else if(score >= 1400){ rank = '暖簾分け候補'; comment = '常連が「腕を上げたね」と言った。親方は聞こえないふりをした。'; }
+  else if(score >= 900){ rank = '一人前'; comment = 'ようやく客に出せる一杯。親方の舌打ちが一回減った。'; }
+  else if(score >= 600){ rank = '見習い三年目'; comment = 'まだ湯が残っている。三年はまだ早かったようだ。'; }
+  else { rank = '皿洗いから出直し'; comment = '親方は無言でスポンジを手渡した。'; }
+
+  // 称号
+  const got = [];
+  const unlock = id => { if(!save.titles[id]){ save.titles[id] = true; got.push(TITLES.find(t=>t.id===id).name); } };
+  unlock('first');
+  if(kiwami > 0) unlock('kiwami');
+  if(maxCombo >= 5) unlock('combo5');
+  if(maxCombo >= 9) unlock('combo9');
+  if(ceilingSplat > 0) unlock('ceiling');
+  if(maxFly >= 10) unlock('space');
+  if(dry < 40) unlock('bland');
+  if(water <= 1.5 && noodles >= 99.9) unlock('perfect');
+  if(score >= 1900 && noodles >= 40) unlock('heir');
+  if(score >= 2200 && noodles >= 40) unlock('god');
+  const isBest = score > save.best;
+  if(isBest) save.best = score;
+  persist();
+
+  lastResult = {score, rank, maxCombo};
+  $('rRank').textContent = `「${rank}」`;
+  $('rScore').textContent = `${score.toLocaleString()} 点` + (isBest ? '　🏆自己ベスト' : '');
+  $('rStats').innerHTML =
+    `振り ${flickScore}　仕上がり ${finish}　時間 ${timeBonus}<br>` +
+    `湯切り率 <b>${Math.round(dry)}%</b>　麺の残存 <b>${Math.round(noodles)}%</b><br>` +
+    `極 <b>${kiwami}</b>回　最大コンボ <b>${maxCombo}</b>　麺の最高飛距離 <b>${maxFly ? maxFly + 'm' : 'なし'}</b>`;
+  $('rComment').textContent = comment;
+  $('rNew').innerHTML = got.length ? '新しい称号：' + got.map(n=>`「${n}」`).join('<br>') : '';
+  updateShare();
+  $('result').classList.remove('hidden');
+}
+function updateShare(){
+  const fly = maxFly ? `／麺の飛距離${maxFly}m` : '';
+  const text = `【湯切り職人】${lastResult.score.toLocaleString()}点「${lastResult.rank}」最大${lastResult.maxCombo}連${fly}\n`;
+  const url = location.href.split('?')[0].split('#')[0];
+  $('shareBtn').href = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}&hashtags=${encodeURIComponent('湯切り職人')}`;
+}
+function updateTitle(){
+  const n = TITLES.filter(t => save.titles[t.id]).length;
+  $('bestLine').textContent = save.best ? `自己ベスト ${save.best.toLocaleString()} 点　称号 ${n}/${TITLES.length}` : '';
+}
+function openBook(){
+  const n = TITLES.filter(t => save.titles[t.id]).length;
+  $('bookCount').textContent = `${n} / ${TITLES.length}`;
+  $('bookList').innerHTML = TITLES.map(t => save.titles[t.id]
+    ? `<div>「${t.name}」<small>${t.hint}</small></div>`
+    : `<div class="lock">？？？？<small>${t.id === 'god' ? '？？？' : t.hint}</small></div>`).join('');
+  $('title').classList.add('hidden'); $('book').classList.remove('hidden');
+}
+updateTitle();
+
+function startGame(){ initAudio(); reset(); state = 'play'; ['title','result','book'].forEach(id => $(id).classList.add('hidden')); }
+$('startBtn').onclick = startGame;
+$('retryBtn').onclick = startGame;
+$('bookBtn').onclick = openBook;
+$('bookClose').onclick = () => { $('book').classList.add('hidden'); $('title').classList.remove('hidden'); };
+$('toTitle').onclick = () => { state = 'title'; updateTitle(); $('result').classList.add('hidden'); $('title').classList.remove('hidden'); };
+
+// ---------- 描画 ----------
+function zaruY(){ return H*0.46 + offset; }
+
+function drawBackground(){
+  ctx.fillStyle = '#2a1c12'; ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle = 'rgba(255,255,255,0.04)'; ctx.lineWidth = 1;
+  for(let y=0;y<H;y+=36){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
+  ctx.fillStyle = '#140d08'; ctx.fillRect(0,0,W,46);
+  if(ceilingSplat > 0){
+    ctx.fillStyle = 'rgba(240,205,110,0.9)';
+    for(let i=0;i<ceilingSplat;i++){
+      const x = (i*97 % Math.max(1, W-40)) + 20;
+      ctx.beginPath(); ctx.ellipse(x, 46, 22, 7, 0, 0, Math.PI*2); ctx.fill();
+      ctx.fillRect(x-2, 46, 4, 18 + (i*13)%20);
+    }
+  }
+  ctx.fillStyle = '#7a1c12';
+  for(let i=0;i<4;i++){ ctx.fillRect(W*0.08 + i*W*0.22, 46, W*0.2, 60); }
+  ctx.fillStyle = '#f4e6cc'; ctx.font = `bold ${Math.min(30, W*0.07)}px serif`; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ['湯','切','職','人'].forEach((c,i)=> ctx.fillText(c, W*0.18 + i*W*0.22, 78));
+  const potY = H*0.78;
+  ctx.fillStyle = '#8d8d8d'; ctx.fillRect(W*0.18, potY, W*0.64, H*0.3);
+  ctx.fillStyle = '#5c5c5c'; ctx.fillRect(W*0.16, potY-8, W*0.68, 14);
+  ctx.fillStyle = 'rgba(255,255,255,0.06)';
+  const t = performance.now()/900;
+  for(let i=0;i<5;i++){ ctx.beginPath(); ctx.arc(W*(0.3+i*0.1) + Math.sin(t+i)*10, potY - 30 - ((t*30+i*40)%120), 18, 0, Math.PI*2); ctx.fill(); }
+}
+
+function drawZaru(){
+  const cx = W*0.5, top = zaruY(), w = Math.min(150, W*0.36), h = w*1.05;
+  ctx.strokeStyle = '#a0703f'; ctx.lineWidth = 12; ctx.lineCap='round';
+  ctx.beginPath(); ctx.moveTo(cx + w*0.45, top + 10); ctx.lineTo(cx + w*1.35, top - h*0.55); ctx.stroke();
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(cx - w/2, top); ctx.lineTo(cx + w/2, top);
+  ctx.lineTo(cx + w*0.38, top + h); ctx.quadraticCurveTo(cx, top + h*1.12, cx - w*0.38, top + h);
+  ctx.closePath();
+  ctx.fillStyle = '#3b3b3b'; ctx.fill();
+  ctx.clip();
+  const lvl = top + h*(1 - water/100*0.85);
+  ctx.fillStyle = 'rgba(120,170,220,0.55)'; ctx.fillRect(cx - w, lvl, w*2, h*1.2);
+  const n = Math.round(noodles/100 * 9);
+  ctx.strokeStyle = '#f0cd6e'; ctx.lineWidth = 4;
+  for(let i=0;i<n;i++){
+    ctx.beginPath();
+    const y0 = top + 10 + i*(h*0.07);
+    for(let x=-w/2; x<=w/2; x+=6){
+      const y = y0 + Math.sin(x*0.12 + i*1.7 + performance.now()/400)*4;
+      x === -w/2 ? ctx.moveTo(cx + x, y) : ctx.lineTo(cx + x, y);
+    }
+    ctx.stroke();
+  }
+  ctx.strokeStyle = 'rgba(200,200,200,0.25)'; ctx.lineWidth = 1;
+  for(let x=-w; x<w; x+=9){ ctx.beginPath(); ctx.moveTo(cx+x, top); ctx.lineTo(cx+x+h*0.2, top+h*1.2); ctx.stroke(); }
+  ctx.restore();
+  ctx.strokeStyle = '#cfcfcf'; ctx.lineWidth = 5;
+  ctx.beginPath(); ctx.moveTo(cx - w/2 - 3, top); ctx.lineTo(cx + w/2 + 3, top); ctx.stroke();
+}
+
+function drawHUD(){
+  const pad = 16, bw = W - pad*2, y = H - 92;
+  bar(pad, y, bw, '残り湯', water/100, '#6fa8dc');
+  bar(pad, y + 26, bw, '麺', noodles/100, '#f0cd6e');
+  bar(pad, y + 52, bw, '時間', timeLeft/TIME_LIMIT, timeLeft < 3 ? '#ff6b5b' : '#c8c8c8');
+  // スコアとコンボ
+  ctx.textAlign = 'right'; ctx.textBaseline = 'top';
+  ctx.fillStyle = '#f4e6cc'; ctx.font = 'bold 20px serif';
+  ctx.fillText(`${flickScore.toLocaleString()} 点`, W - 14, 116);
+  if(combo > 1){ ctx.fillStyle = '#ffd36b'; ctx.font = 'bold 18px serif'; ctx.fillText(`${combo}連`, W - 14, 142); }
+}
+function bar(x, y, w, label, r, color){
+  ctx.fillStyle = 'rgba(0,0,0,0.55)'; ctx.fillRect(x, y, w, 18);
+  ctx.fillStyle = color; ctx.fillRect(x + 62, y + 3, (w - 66) * Math.max(0, r), 12);
+  ctx.fillStyle = '#f4e6cc'; ctx.font = '13px sans-serif'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.fillText(label, x + 6, y + 9);
+}
+function outlined(text, x, y, size, color){
+  ctx.font = `bold ${size}px serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.strokeStyle = '#000'; ctx.lineWidth = Math.max(4, size/7); ctx.strokeText(text, x, y);
+  ctx.fillStyle = color; ctx.fillText(text, x, y);
+}
+
+let prev = performance.now();
+function loop(now){
+  const dt = Math.min(0.05, (now - prev)/1000); prev = now;
+  if(state === 'play'){
+    if(readyT > 0){ readyT -= dt; }
+    else { timeLeft -= dt; if(timeLeft <= 0){ timeLeft = 0; endGame(); } }
+  }
+  offset += (targetOffset - offset) * Math.min(1, dt*18);
+  shake *= Math.pow(0.02, dt);
+
+  ctx.save();
+  if(shake > 0.3) ctx.translate((Math.random()-0.5)*shake, (Math.random()-0.5)*shake);
+  drawBackground();
+  if(state !== 'title') drawZaru();
+
+  ctx.fillStyle = 'rgba(160,200,240,0.85)';
+  particles.forEach(p => { p.vy += 0.5; p.x += p.vx; p.y += p.vy; p.life -= dt*1.2;
+    ctx.beginPath(); ctx.arc(p.x, p.y, 3, 0, Math.PI*2); ctx.fill(); });
+  particles = particles.filter(p => p.life > 0 && p.y < H + 20);
+
+  ctx.strokeStyle = '#f0cd6e'; ctx.lineWidth = 4;
+  flyers.forEach(f => {
+    f.vy += 0.35; f.x += f.vx; f.y += f.vy; f.rot += f.vr;
+    if(f.y < 50){ f.dead = true; ceilingSplat = Math.min(12, ceilingSplat + 1); shake = 16; }
+    ctx.save(); ctx.translate(f.x, f.y); ctx.rotate(f.rot);
+    ctx.beginPath(); for(let i=-20;i<=20;i+=4){ const yy = Math.sin(i*0.3)*5; i===-20?ctx.moveTo(i,yy):ctx.lineTo(i,yy); } ctx.stroke();
+    ctx.restore();
+  });
+  flyers = flyers.filter(f => !f.dead && f.y < H + 40);
+
+  popups.forEach(p => {
+    p.t -= dt; p.y -= dt*28;
+    ctx.globalAlpha = Math.max(0, Math.min(1, p.t*2.5));
+    const size = p.big ? Math.min(64, W*0.15) : Math.min(40, W*0.095);
+    outlined(p.text, W/2, p.y, size, p.color);
+    if(p.sub) outlined(p.sub, W/2, p.y + size*0.85, Math.min(20, W*0.05), '#f4e6cc');
+    ctx.globalAlpha = 1;
+  });
+  popups = popups.filter(p => p.t > 0);
+
+  if(state === 'play' || state === 'over') drawHUD();
+  if(state === 'play' && readyT > 0) outlined('茹で上がり！', W/2, H*0.3, Math.min(44, W*0.11), '#ffd36b');
+  if(state === 'over') outlined('へい、お待ち！', W/2, H*0.3, Math.min(40, W*0.1), '#fff');
+  ctx.restore();
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
